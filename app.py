@@ -5,6 +5,7 @@ from utils.parser import extract_text_from_pdf
 from utils.embeddings import generate_embedding
 from utils.embeddings import generate_embeddings
 from utils.ranking import rank_resumes
+from utils.llm import (summarize_resume, generate_interview_questions)
 
 #Page configuration
 st.set_page_config(
@@ -15,7 +16,7 @@ st.set_page_config(
 
 #Header
 st.title("📄 AI Resume Ranker")
-st.markdown("""Upload resumrs and compare candidates against a job description using AI-powered semantic similarity.""")
+st.markdown("""Upload resumes and compare candidates against a job description using AI-powered semantic similarity.""")
 
 #Sidebar
 st.sidebar.title("Settings")
@@ -34,17 +35,16 @@ if st.button("Rank Candidates"):
     elif not job_description.strip():
         st.warning("Please enter a job description.")
     else:
-        resume_names = []
-        resume_texts = []
+        resume_data = []
         for file in uploaded_files:
             text = extract_text_from_pdf(file)
             if text:
-                resume_names.append(file.name)
-                resume_texts.append(text)
+                resume_data.append({"name":file.name, "text": text})
         
         #Generating Embeddings
         with st.spinner("Processing resumes..."):
             job_embedding = generate_embedding(job_description)
+            resume_texts = [resume["text"] for resume in resume_data]
             resume_embeddings = generate_embeddings(resume_texts)
             scores = rank_resumes(resume_embeddings, job_embedding)
         
@@ -52,7 +52,7 @@ if st.button("Rank Candidates"):
         results = []
         for i,score in enumerate(scores):
                 results.append({
-                    "Resume": resume_names[i],
+                    "Resume": resume_data[i]["name"],
                     "Match Score": round(score*100,2)
                 })
         
@@ -71,9 +71,22 @@ if st.button("Rank Candidates"):
         else:
             #Top candidate
             top_candidate = results_df.iloc[0]
+            
+            #AI insights
+            st.markdown("## 🤖 AI Candidate Insights")
+            top_resume_name = top_candidate["Resume"]
+            top_resume_text = next(resume["text"] for resume in resume_data if resume["name"] == top_resume_name)
+            with st.spinner("Generating AI insights..."):
+                summary = summarize_resume(top_resume_text)
+                questions = generate_interview_questions(top_resume_text)
+            st.subheader("Candidate Summary:")
+            st.write(summary)
+            st.subheader("Suggested Interview Questions:")
+            st.write(questions)
+            
             st.markdown("## 🏆 Top Candidate")
             st.info(f"""Resume: {top_candidate['Resume']} Match Score: {top_candidate['Match Score']}%""")
-            
+
             #Total matching candidates
             st.write(f"Total Matching Candidates: {len(results_df)}")
 
