@@ -1,54 +1,39 @@
 from langchain_ollama import ChatOllama
 
-from utils.llm import (
-    summarize_resume,
-    generate_interview_questions
-)
+llm = ChatOllama(model="mistral", temperature=0.7)
 
 
-llm = ChatOllama(
+def ask_agent(query: str, resume_context: str = "") -> str:
+    try:
+        # Build the resume section only if context is provided
+        resume_section = f"""
+        You have access to the following candidate resumes:
+        -------------------------------------------------------
+        {resume_context}
+        -------------------------------------------------------
+        Use this information to answer questions about specific candidates.
+        Always mention the candidate's name (resume filename) when referring to them.
+        """ if resume_context.strip() else ""
 
-    model="mistral",
+        system_prompt = f"""
+        You are an AI recruiter assistant.
 
-    temperature=0.7
-)
+        {resume_section}
 
+        Help recruiters with:
+        - Comparing candidates across resumes
+        - Identifying the most experienced or skilled candidate
+        - Candidate evaluation and shortlisting
+        - Generating interview questions
+        - Resume analysis and highlights
+        - Technical assessments
 
-def ask_agent(query):
+        Recruiter Query:
+        {query}
+        """
 
-    query_lower = query.lower()
-
-
-    # -----------------------------------------
-    # TOOL: INTERVIEW QUESTIONS
-    # -----------------------------------------
-
-    if (
-        "interview" in query_lower
-        or "questions" in query_lower
-    ):
-
-        return generate_interview_questions(query)
-
-
-    # -----------------------------------------
-    # TOOL: RESUME SUMMARY
-    # -----------------------------------------
-
-    elif (
-        "summarize" in query_lower
-        or "summary" in query_lower
-    ):
-
-        return summarize_resume(query)
-
-
-    # -----------------------------------------
-    # DEFAULT LLM RESPONSE
-    # -----------------------------------------
-
-    else:
-
-        response = llm.invoke(query)
-
+        response = llm.invoke(system_prompt)
         return response.content
+
+    except Exception as e:
+        return f"Error: {str(e)}"
