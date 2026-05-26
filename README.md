@@ -31,7 +31,7 @@ TalentLens helps recruiters automatically rank, compare, and analyse candidates 
 
 > ⚠️ **Local LLM Notice** — See the important note below before running.
 
-![TalentLens Screenshot](assets/screenshot.png)
+![TalentLens Screenshot](Screenshots/HomePage.png)
 
 ---
 
